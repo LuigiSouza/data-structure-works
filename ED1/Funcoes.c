@@ -39,6 +39,35 @@ int lst_tamanho(Lista_de_Cartas * inicio){
     return i;
 }
 
+void ordena (Lista_de_Cartas ** Jogador_Mao){
+    Lista_de_Cartas *j = *Jogador_Mao;
+
+    (*Jogador_Mao) = (*Jogador_Mao)->prox;
+    Lista_de_Cartas *q = (*Jogador_Mao);
+    Lista_de_Cartas *p = (*Jogador_Mao);
+    Lista_de_Cartas *ant = p;
+
+    j->prox = NULL;
+
+    while(p != NULL)
+    {
+        if(j->CartaAtual.valor < p->CartaAtual.valor)
+            break;
+        ant = p;
+        p = p->prox;
+    }
+    if(p != ant){
+        ant->prox = j;
+        j->prox = p;
+    }
+    else{
+        j->prox = (*Jogador_Mao);
+        (*Jogador_Mao) = j;
+    }
+
+    return;
+}
+
 
 //------------------------------------------------------------------------------------------------------------------------
 
@@ -152,8 +181,8 @@ void Cria_Baralho(Lista_de_Cartas ** BaralhoTotal){
     char aux[10];
 
     for(int i = 0; i < BARALHOS; i++){
-        for(int j = 0; j < 4; j++){
-            for(int z = 0; z < 13; z++){
+        for(int j = 0; j < NAIPES; j++){
+            for(int z = 0; z < CARTAS; z++){
                 ConverteNaipe(j, aux);
                 lst_insere(BaralhoTotal, z + 1, aux);
             }
@@ -165,6 +194,7 @@ void Embaralha(Lista_de_Cartas ** Bolo, int num_de_cartas){
     srand(time(NULL));
 
     int aux;
+    int auxant = -1;
     int j;
 
     Lista_de_Cartas *anterior;
@@ -183,6 +213,10 @@ void Embaralha(Lista_de_Cartas ** Bolo, int num_de_cartas){
         anterior = proximo;
 
         aux = rand()%num_de_cartas;
+
+        while(aux == auxant){
+            aux = rand()%num_de_cartas;
+        }
 
         while(j < aux){
             anterior = proximo;
@@ -204,6 +238,7 @@ void Embaralha(Lista_de_Cartas ** Bolo, int num_de_cartas){
         inicio->prox = final;
 
         *Bolo = proximo;
+        auxant = aux;
     }
 }
 
@@ -231,11 +266,17 @@ void Imprime_mao(lista_Jogadores * l, Lista_de_Cartas * Pesca, Lista_de_Cartas *
     Lista_de_Cartas *rola = Pesca;
     printf("\nTamanho da Pesca: %4d\nCartas no Descarte: %2d\n\nCartas na Mao: %7d\n\n", lst_tamanho(Pesca), lst_tamanho(Descarte), lst_tamanho(l->Jogador.Mao));
 
-    int pos = 1;
-    printf("-----------------------   jogador: %s\n", l->Jogador.nome);
-    Lista_de_Cartas *q = l->Jogador.Mao;
+    printf("Jogador  : %s\n", l->Jogador.nome);
+    if(l->Jogador.CPU == true)
+        printf("Controle : Computador\n");
+    else
+        printf("Controle : Jogador\n");
+    printf("-----------------------\n");
     printf("\nCarta   0: Comprar uma nova carta\n\n");
-    while(q != NULL && l->Jogador.CPU == false){
+
+    Lista_de_Cartas *q = l->Jogador.Mao;
+    int pos = 1;
+    while(q != NULL){
         printf("Carta %3d: %2d , %s\n",pos ,q->CartaAtual.valor, q->CartaAtual.naipe);
         q = q->prox;
         pos++;
@@ -300,6 +341,7 @@ void lst_entrega_primeira_rodada(Lista_de_Cartas ** Inicio_bolo,
     for(int i = 0; i < 9; i++){
         for(int j = 0; j < num; j++){
             lst_entrega_uma_carta(&posBolo, &posPlayer->Jogador.Mao);
+            ordena(&posPlayer->Jogador.Mao);
 
             posPlayer = posPlayer->prox;
         }
@@ -329,7 +371,8 @@ Lista_de_Cartas * lst_acha_pos(Lista_de_Cartas * inicio, int i, Lista_de_Cartas 
 void compra_carta(Lista_de_Cartas ** Monte_inicio, lista_Jogadores ** Jogador_atual){
     Lista_de_Cartas *aux = (*Jogador_atual)->Jogador.Mao;
 
-    lst_entrega_uma_carta(Monte_inicio, &aux);    
+    lst_entrega_uma_carta(Monte_inicio, &aux);
+    ordena(&aux);    
 
     (*Jogador_atual)->Jogador.Mao = aux;
 
@@ -367,6 +410,7 @@ void compra_carta_aleatoria(bool Bot, lista_Jogadores ** Jogador_atual,
             (*Jogador_atual)->Jogador.ganhando = true;
     }
     else{
+        printf("\nO jogador anterior jogou um Rei (13), o próximo jogador descarta uma carta...");
         carta = rand()%lst_tamanho((*Jogador_atual)->Jogador.Mao);
 
         pos = lst_acha_pos((*Jogador_atual)->Jogador.Mao, carta, &ant);
@@ -386,12 +430,15 @@ void carta_especial(int valor, bool * inverte, lista_Jogadores ** Jogador_atual,
 
     Lista_de_Cartas *aux;
 
-    if(valor == 1)
+    if(valor == 1){
+        printf("O jogador jogou um As... A ordem dos jogadores foi invertida!\n");
         if(*inverte == true)
             *inverte = false;
         else  
             *inverte = true;
+    }
     else if(valor == 11){
+        printf("O jogador jogou um 'J'... O proximo jogador compra duas cartas!\n");
         if(*inverte == false)
             aux = (*Jogador_atual)->prox->Jogador.Mao;
         else
@@ -401,10 +448,12 @@ void carta_especial(int valor, bool * inverte, lista_Jogadores ** Jogador_atual,
         if(lst_tamanho(*Monte_inicio) == 0)
             Pega_carta_de_volta(Monte_inicio, Descarte_inicio, Jogador_atual, 0);
         lst_entrega_uma_carta(Monte_inicio, &aux);
+        ordena(&aux);
 
         if(lst_tamanho(*Monte_inicio) == 0)
             Pega_carta_de_volta(Monte_inicio, Descarte_inicio, Jogador_atual, 0);
         lst_entrega_uma_carta(Monte_inicio, &aux);
+        ordena(&aux);
 
         if(*inverte == false){
             (*Jogador_atual)->prox->Jogador.ganhando = false;
@@ -416,6 +465,7 @@ void carta_especial(int valor, bool * inverte, lista_Jogadores ** Jogador_atual,
         }
     }
     else if(valor == 12){
+        printf("O jogador jogou um 'Q'... O Jogador anterior compra duas cartas!\n");
         if(*inverte == false)
             aux = (*Jogador_atual)->ant->Jogador.Mao;
         else
@@ -424,10 +474,12 @@ void carta_especial(int valor, bool * inverte, lista_Jogadores ** Jogador_atual,
         if(lst_tamanho(*Monte_inicio) == 0)
             Pega_carta_de_volta(Monte_inicio, Descarte_inicio, Jogador_atual, 0);
         lst_entrega_uma_carta(Monte_inicio, &aux);
+        ordena(&aux);
 
         if(lst_tamanho(*Monte_inicio) == 0)
             Pega_carta_de_volta(Monte_inicio, Descarte_inicio, Jogador_atual, 0);
         lst_entrega_uma_carta(Monte_inicio, &aux);
+        ordena(&aux);
 
         if(*inverte == false){
             (*Jogador_atual)->ant->Jogador.ganhando = false;

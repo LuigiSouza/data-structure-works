@@ -2,6 +2,9 @@
 #define __FUNCOES__
 
 #define BARALHOS 2
+#define PORBARALHO 52
+#define NAIPES 4
+#define CARTAS 13
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +49,8 @@ typedef struct Lista_t lista_Jogadores;
 bool verifica_naipe(char primeia[20], char segunda[20]);
 
 int lst_tamanho(Lista_de_Cartas * inicio);
+
+void ordena (Lista_de_Cartas ** Jogador_Mao);
 
 
 //------------------------------------------------------------------------------------------------------------------------
